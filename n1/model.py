@@ -8,11 +8,11 @@ from torch.nn import functional as F
 @dataclass
 class GPTConfig:
     vocab_size: int
-    block_size: int = 128
-    n_layer: int = 4
-    n_head: int = 4
-    n_embd: int = 128
-    dropout: float = 0.0
+    block_size: int = 512
+    n_layer: int = 8
+    n_head: int = 8
+    n_embd: int = 256
+    dropout: float = 0.1
 
 
 class CausalSelfAttention(nn.Module):
@@ -76,6 +76,8 @@ class Block(nn.Module):
 class GPT(nn.Module):
     def __init__(self, config: GPTConfig):
         super().__init__()
+        if config.n_embd % config.n_head:
+            raise ValueError("n_embd must be divisible by n_head")
         self.config = config
         self.token_embedding = nn.Embedding(config.vocab_size, config.n_embd)
         self.position_embedding = nn.Embedding(config.block_size, config.n_embd)

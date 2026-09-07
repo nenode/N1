@@ -14,6 +14,7 @@ packages = ["n1"]
 [project.scripts]
 n1-train = "n1.train:main"
 n1-chat = "n1.chat:main"
+n1-story = "n1.story:main"
 
 [tool.pytest.ini_options]
 pythonpath = ["."]

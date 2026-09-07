@@ -2,7 +2,7 @@
 
 N1 is a small, trainable autoregressive language model written in Python and PyTorch. It is a real neural network that learns to predict the next character from context; it is not an intent classifier or a set of hand-written responses.
 
-This is an educational foundation, not a ChatGPT-scale model. Its quality depends on the training data and compute available. Character-level training is intentionally simple, so the next upgrade for serious use would be a subword tokenizer and a much larger dataset.
+This is an educational foundation, not a ChatGPT-scale model. Its quality depends on the training data and compute available. N1 uses byte-level tokens, so it remains less efficient than a subword-tokenized model, but the default architecture is now larger (8 layers, 8 heads, 256-wide embeddings, and 512-token context).
 
 ## Run it
 
@@ -25,6 +25,20 @@ Talk to the trained N1 model:
 ```bash
 python -m n1.chat
 ```
+
+Chat generates at least 160 new tokens by default, then continues until it reaches a sentence boundary. Use `--tokens` to change the minimum response length and `--max-tokens` to set the hard safety limit:
+
+```bash
+python -m n1.chat --tokens 100 --max-tokens 320 --temperature 0.6
+```
+
+Generate a story automatically without entering a prompt:
+
+```bash
+python -m n1.story --checkpoint checkpoints/n1.pt
+```
+
+Use `--sentences`, `--max-tokens`, and `--temperature` to control the story length and style.
 
 Use your own UTF-8 text by passing a file:
 
@@ -54,10 +68,39 @@ python -m n1.train \
 	--dataset-config sample-10BT \
 	--text-column text \
 	--max-chars 500000000 \
-	--steps 100000
+	--steps 100000 \
+	--block-size 512 \
+	--batch-size 8 \
+	--out checkpoints/base.pt
 ```
 
-`--max-chars 0` streams until the dataset ends, which may require substantial disk space and RAM. Set a Hugging Face token in the environment only when using a private or gated dataset.
+The trainer stores the corpus as compact bytes and converts only each batch to model indices, keeping peak memory much lower. Start with `--batch-size 8` on a CPU or small GPU and increase it only if resources allow. `--max-chars 0` streams until the dataset ends, which may require substantial disk space. Set a Hugging Face token in the environment only when using a private or gated dataset.
+
+For general question answering, train a separate checkpoint on instruction data. This example formats the question and answer together, so N1 learns the conversation pattern:
+
+```bash
+python -m n1.train \
+	--dataset databricks/databricks-dolly-15k \
+	--format qa \
+	--question-column instruction \
+	--context-column context \
+	--answer-column response \
+	--max-chars 50000000 \
+	--steps 100000 \
+	--block-size 512 \
+	--layers 8 \
+	--heads 8 \
+	--embedding-size 256 \
+	--out checkpoints/qa.pt
+```
+
+Chat with that checkpoint using the matching prompt format:
+
+```bash
+python -m n1.chat --checkpoint checkpoints/qa.pt --qa --temperature 0.4
+```
+
+This teaches response patterns; it does not guarantee factual accuracy. For reliable current facts, add retrieval or external tools.
 
 The N1 model learns statistical patterns from the text it sees. It does not automatically browse the web, verify facts, remember conversations between runs, or reason like a person. Those are separate capabilities that can be added around the language model later.
 
