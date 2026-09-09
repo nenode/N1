@@ -107,11 +107,28 @@ class GPT(nn.Module):
         return logits, loss
 
     @torch.no_grad()
-    def generate(self, tokens: torch.Tensor, max_new_tokens: int, temperature: float = 0.8, top_k: int = 40):
+    def generate(
+        self,
+        tokens: torch.Tensor,
+        max_new_tokens: int,
+        temperature: float = 0.8,
+        top_k: int = 40,
+        repetition_penalty: float = 1.0,
+    ):
+        if repetition_penalty < 1.0:
+            raise ValueError("repetition_penalty must be at least 1")
         for _ in range(max_new_tokens):
             context = tokens[:, -self.config.block_size :]
             logits, _ = self(context)
             logits = logits[:, -1, :] / max(temperature, 1e-5)
+            if repetition_penalty > 1.0:
+                previous_tokens = tokens[:, -self.config.block_size :]
+                previous_logits = logits.gather(1, previous_tokens)
+                logits.scatter_(
+                    1,
+                    previous_tokens,
+                    torch.where(previous_logits < 0, previous_logits * repetition_penalty, previous_logits / repetition_penalty),
+                )
             if top_k:
                 values, _ = torch.topk(logits, min(top_k, logits.size(-1)))
                 logits[logits < values[:, [-1]]] = float("-inf")

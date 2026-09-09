@@ -38,7 +38,11 @@ Generate a story automatically without entering a prompt:
 python -m n1.story --checkpoint checkpoints/n1.pt
 ```
 
-Use `--sentences`, `--max-tokens`, and `--temperature` to control the story length and style.
+Use `--sentences`, `--max-tokens`, `--temperature`, and `--name` to control the story length, style, and main character:
+
+```bash
+python -m n1.story --checkpoint checkpoints/n1.pt --sentences 24 --name Alex
+```
 
 Use your own UTF-8 text by passing a file:
 
